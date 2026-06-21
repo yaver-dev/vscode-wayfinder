@@ -1,0 +1,9 @@
+# Main test SSH config
+Host example-main
+  HostName 192.0.2.60
+
+Include conf.d/*.conf
+Include nested/extra.conf
+
+Host * !blocked wildcard?
+  User ignored

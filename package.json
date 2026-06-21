@@ -1,0 +1,175 @@
+{
+  "name": "wayfinder",
+  "displayName": "Wayfinder",
+  "description": "A modern workspace launcher and dashboard for Visual Studio Code.",
+  "version": "0.1.0",
+  "publisher": "yaver-dev",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yaver-dev/vscode-wayfinder.git"
+  },
+  "engines": {
+    "vscode": "^1.99.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "workspace",
+    "dashboard",
+    "remote-ssh",
+    "launcher"
+  ],
+  "main": "./dist/extension.js",
+  "extensionKind": [
+    "ui"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "wayfinder.open",
+        "title": "Wayfinder: Open Dashboard",
+        "icon": "$(home)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "wayfinder.open"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Wayfinder",
+      "properties": {
+        "wayfinder.groups": {
+          "type": "array",
+          "scope": "application",
+          "default": [],
+          "description": "Pinned workspace groups shown in Wayfinder.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "order"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                "description": "Stable lowercase kebab-case identifier."
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Visible group name."
+              },
+              "order": {
+                "type": "number",
+                "description": "Display order; lower values appear first."
+              }
+            }
+          }
+        },
+        "wayfinder.workspaces": {
+          "type": "array",
+          "scope": "application",
+          "default": [],
+          "description": "Pinned local, Remote SSH, and workspace-file targets.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "groupId",
+              "name",
+              "kind",
+              "path"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                "description": "Stable lowercase kebab-case identifier."
+              },
+              "groupId": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                "description": "Identifier of the containing Wayfinder group."
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Visible workspace name."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "local",
+                  "ssh",
+                  "workspaceFile"
+                ],
+                "description": "Workspace target type."
+              },
+              "host": {
+                "type": "string",
+                "minLength": 1,
+                "description": "SSH alias from the local SSH configuration. Required for ssh targets."
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Absolute local or remote path. Workspace-file targets must point to a .code-workspace file."
+              },
+              "color": {
+                "type": "string",
+                "enum": [
+                  "purple",
+                  "blue",
+                  "green",
+                  "orange",
+                  "pink",
+                  "gray"
+                ],
+                "description": "Optional dashboard accent color."
+              }
+            }
+          }
+        },
+        "wayfinder.openOnEmptyWindow": {
+          "type": "boolean",
+          "scope": "application",
+          "default": false,
+          "description": "Open Wayfinder automatically when VS Code starts without a folder or workspace."
+        },
+        "wayfinder.importSshHosts": {
+          "type": "boolean",
+          "scope": "application",
+          "default": true,
+          "description": "Show valid SSH host aliases from the configured SSH config file in Wayfinder."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "node ./scripts/esbuild.mjs --production",
+    "watch": "node ./scripts/esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.webview.json",
+    "test": "tsx --test test/*.test.ts",
+    "package": "npm run compile && npx @vscode/vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/vscode": "^1.99.0",
+    "@vscode/vsce": "^3.4.0",
+    "esbuild": "^0.25.4",
+    "typescript": "^5.8.3",
+    "tsx": "^4.20.3"
+  }
+}

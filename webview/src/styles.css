@@ -1,0 +1,589 @@
+:root {
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--vscode-editor-background);
+  color: var(--vscode-foreground);
+}
+
+button {
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 6px;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1.2;
+  padding: 7px 10px;
+}
+
+button:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+button:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
+.wayfinder-shell {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.85fr) minmax(360px, 2fr) minmax(220px, 0.9fr);
+  gap: 16px;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.wayfinder-panel {
+  min-width: 0;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 10px;
+  background: var(--vscode-sideBar-background);
+  padding: 14px;
+}
+
+.workspace-panel {
+  background: var(--vscode-editor-background);
+}
+
+.wayfinder-panel h1,
+.wayfinder-panel h2,
+.wayfinder-panel h3,
+.wayfinder-loading h1 {
+  margin: 0;
+  color: var(--vscode-foreground);
+  font-weight: 600;
+}
+
+.wayfinder-panel h1 {
+  font-size: 1.05rem;
+  margin-bottom: 14px;
+}
+
+.wayfinder-panel h2 {
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+}
+
+.wayfinder-panel h3 {
+  font-size: 0.95rem;
+}
+
+.recent-list,
+.quick-action-list,
+.remote-host-list {
+  display: grid;
+  gap: 8px;
+}
+
+.recent-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  align-items: center;
+  border-radius: 6px;
+  padding: 6px;
+}
+
+.recent-item:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.recent-open {
+  grid-column: 1;
+  justify-self: start;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--vscode-foreground);
+  padding: 0;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-open:hover {
+  background: transparent;
+  color: var(--vscode-textLink-foreground);
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0;
+  position: relative;
+}
+
+.recent-item>.icon-button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.icon-button:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+  color: var(--vscode-foreground);
+}
+
+.destructive-icon-button:hover {
+  background: var(--vscode-inputValidation-errorBackground, var(--vscode-toolbar-hoverBackground));
+  color: var(--vscode-errorForeground);
+}
+
+.panel-heading-actions .icon-button {
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+}
+
+.panel-heading-actions .icon-button:hover {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.target-detail {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-group+.workspace-group {
+  margin-top: 20px;
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 12px;
+  min-height: 80px;
+}
+
+.workspace-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 8px;
+  background: var(--vscode-editorWidget-background);
+  padding: 12px;
+}
+
+.workspace-card::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--vscode-descriptionForeground);
+  content: "";
+}
+
+.workspace-card[data-color="purple"]::before {
+  background: var(--vscode-charts-purple);
+}
+
+.workspace-card[data-color="blue"]::before {
+  background: var(--vscode-charts-blue);
+}
+
+.workspace-card[data-color="green"]::before {
+  background: var(--vscode-charts-green);
+}
+
+.workspace-card[data-color="orange"]::before {
+  background: var(--vscode-charts-orange);
+}
+
+.workspace-card[data-color="pink"]::before {
+  background: var(--vscode-charts-red);
+}
+
+.workspace-card>* {
+  margin-left: 4px;
+}
+
+.workspace-card .target-detail {
+  margin-top: 6px;
+}
+
+.workspace-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.workspace-actions .icon-button {
+  font-size: 1rem;
+}
+
+.workspace-card>h3 {
+  padding-right: 24px;
+}
+
+.workspace-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.workspace-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 999px;
+  background: var(--vscode-badge-background, var(--vscode-editorWidget-background));
+  color: var(--vscode-badge-foreground, var(--vscode-descriptionForeground));
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 7px;
+}
+
+.workspace-badge[data-kind="ssh"] {
+  border-color: var(--vscode-charts-purple);
+}
+
+.workspace-badge[data-kind="local"] {
+  border-color: var(--vscode-charts-green);
+}
+
+.workspace-badge[data-kind="workspaceFile"] {
+  border-color: var(--vscode-charts-blue);
+}
+
+.workspace-window-badge {
+  border-style: dashed;
+}
+
+.secondary-button {
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+}
+
+.secondary-button:hover {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.quick-action-list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.quick-action-list .quick-action-button {
+  width: 100%;
+  height: 38px;
+  border: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-editorWidget-background);
+  color: var(--vscode-foreground);
+  font-size: 1.2rem;
+}
+
+.quick-action-list .quick-action-button:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.subheading {
+  margin-top: 24px !important;
+}
+
+.remote-host-item {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: var(--vscode-list-inactiveSelectionBackground);
+  color: var(--vscode-foreground);
+  padding: 7px 8px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remote-host-item:hover {
+  border-color: var(--vscode-focusBorder);
+  background: var(--vscode-list-hoverBackground);
+}
+
+.empty-state {
+  margin: 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.wayfinder-loading {
+  display: grid;
+  min-height: 100vh;
+  place-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.wayfinder-loading p {
+  margin: 0;
+  color: var(--vscode-descriptionForeground);
+}
+
+.panel-heading-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: -4px 0 14px;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.group-header h2 {
+  margin-bottom: 0;
+}
+
+.group-actions,
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.group-actions .icon-button {
+  width: 27px;
+  height: 27px;
+  min-width: 27px;
+  font-size: 1rem;
+}
+
+.small-button {
+  font-size: 0.78rem;
+  padding: 4px 7px;
+}
+
+.editor-card {
+  margin-top: 20px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 8px;
+  background: var(--vscode-editorWidget-background);
+  padding: 14px;
+}
+
+.editor-card h2 {
+  margin-bottom: 14px;
+}
+
+.editor-form {
+  display: grid;
+  gap: 12px;
+}
+
+.form-field {
+  display: grid;
+  gap: 6px;
+  color: var(--vscode-foreground);
+  font-size: 0.9rem;
+}
+
+.form-field input,
+.form-field select {
+  width: 100%;
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 4px;
+  outline: 0;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font: inherit;
+  padding: 7px 8px;
+}
+
+.form-field input::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+
+.form-field input:focus,
+.form-field select:focus {
+  border-color: var(--vscode-focusBorder);
+}
+
+.form-field input:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.checkbox-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+}
+
+.checkbox-field input {
+  margin: 0;
+}
+
+.editor-actions {
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.sort-hint {
+  margin: -2px 0 16px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.82rem;
+}
+
+.group-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 22px;
+  color: var(--vscode-descriptionForeground);
+  cursor: grab;
+  font-size: 1.15rem;
+  line-height: 1;
+  user-select: none;
+}
+
+.drag-handle:hover {
+  color: var(--vscode-foreground);
+}
+
+.workspace-group:has(.drag-handle:active),
+.workspace-card:has(.drag-handle:active) {
+  cursor: grabbing;
+}
+
+.workspace-group.dragging,
+.workspace-card.dragging {
+  opacity: 0.5;
+}
+
+.workspace-group:hover>.group-header .drag-handle,
+.workspace-card:hover>.drag-handle {
+  color: var(--vscode-foreground);
+}
+
+.workspace-card>.drag-handle {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 1;
+}
+
+.icon-button[aria-label]::after {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 10;
+  width: max-content;
+  max-width: 220px;
+  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border));
+  border-radius: 5px;
+  background: var(--vscode-editorWidget-background);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 28%);
+  color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+  content: attr(aria-label);
+  font-size: 0.78rem;
+  line-height: 1.25;
+  opacity: 0;
+  padding: 5px 7px;
+  pointer-events: none;
+  transform: translateY(2px);
+  transition: opacity 100ms ease, transform 100ms ease;
+  visibility: hidden;
+  white-space: nowrap;
+}
+
+.icon-button[aria-label]:hover::after,
+.icon-button[aria-label]:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.workspace-actions .icon-button[aria-label]::after {
+  bottom: calc(100% + 6px);
+}
+
+.group-actions .icon-button[aria-label]::after,
+.panel-heading-actions .icon-button[aria-label]::after {
+  top: calc(100% + 8px);
+  bottom: auto;
+}
+
+.icon-button svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  pointer-events: none;
+}
+
+.quick-action-list .quick-action-button svg {
+  width: 19px;
+  height: 19px;
+}
+
+@media (max-width: 980px) {
+  .wayfinder-shell {
+    grid-template-columns: minmax(200px, 0.9fr) minmax(0, 2fr);
+  }
+
+  .utility-panel {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 680px) {
+  .wayfinder-shell {
+    grid-template-columns: 1fr;
+    padding: 10px;
+  }
+
+  .utility-panel {
+    grid-column: auto;
+  }
+
+  .group-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .panel-heading-actions {
+    justify-content: flex-start;
+  }
+
+  .quick-action-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
