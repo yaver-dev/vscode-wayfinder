@@ -57,7 +57,7 @@ Include
 
 test("resolves relative and glob Include files recursively", async () => {
   const configPath = path.join(import.meta.dirname, "fixtures", "ssh", "config");
-  const service = new SshConfigService(configPath);
+  const service = new SshConfigService({ getSshConfigFile: () => undefined }, configPath);
 
   const hosts = await service.listHosts();
 
@@ -65,10 +65,10 @@ test("resolves relative and glob Include files recursively", async () => {
     hosts.map((host) => host.alias),
     [
       "example-app",
+      "example-hypervisor",
       "example-k3s-dev",
       "example-main",
-      "example-workstation",
-      "example-hypervisor"
+      "example-workstation"
     ]
   );
 });

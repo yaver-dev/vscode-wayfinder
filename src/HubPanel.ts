@@ -13,6 +13,7 @@ import { SshConfigService } from "./services/SshConfigService";
 import { WorkspaceService } from "./services/WorkspaceService";
 import { validateGroups, validateWorkspaces } from "./validation/ConfigValidation";
 import { validateWorkspaceTarget } from "./validation/WorkspaceTargetValidation";
+import { isWebviewMessage, quickActionCommandIds } from "./validation/MessageValidation";
 
 interface HubPanelDependencies {
   extensionUri: vscode.Uri;
@@ -75,65 +76,84 @@ export class HubPanel {
     HubPanel.currentPanel?.dispose();
   }
 
+  private readonly messageHandlers: Record<string, (msg: WebviewMessage) => Promise<void>> = {
+    ready: () => this.postSnapshot(),
+    refresh: () => this.postSnapshot(),
+    openWorkspace: (msg) =>
+      this.openConfiguredWorkspace(
+        (msg as Extract<WebviewMessage, { type: "openWorkspace" }>).workspaceId,
+        (msg as Extract<WebviewMessage, { type: "openWorkspace" }>).forceNewWindow
+      ),
+    openRecent: (msg) =>
+      this.openRecentTarget(
+        (msg as Extract<WebviewMessage, { type: "openRecent" }>).fingerprint,
+        (msg as Extract<WebviewMessage, { type: "openRecent" }>).forceNewWindow
+      ),
+    removeRecent: (msg) =>
+      this.removeRecentTarget(
+        (msg as Extract<WebviewMessage, { type: "removeRecent" }>).fingerprint
+      ),
+    removeWorkspace: (msg) =>
+      this.removeWorkspace(
+        (msg as Extract<WebviewMessage, { type: "removeWorkspace" }>).workspaceId
+      ),
+    saveGroup: (msg) =>
+      this.saveGroup(
+        (msg as Extract<WebviewMessage, { type: "saveGroup" }>).group
+      ),
+    removeGroup: (msg) =>
+      this.removeGroup(
+        (msg as Extract<WebviewMessage, { type: "removeGroup" }>).groupId
+      ),
+    saveWorkspace: (msg) =>
+      this.saveWorkspace(
+        (msg as Extract<WebviewMessage, { type: "saveWorkspace" }>).workspace
+      ),
+    reorderGroups: (msg) =>
+      this.reorderGroups(
+        (msg as Extract<WebviewMessage, { type: "reorderGroups" }>).groupIds
+      ),
+    reorderWorkspaces: (msg) =>
+      this.reorderWorkspaces(
+        (msg as Extract<WebviewMessage, { type: "reorderWorkspaces" }>).groupId,
+        (msg as Extract<WebviewMessage, { type: "reorderWorkspaces" }>).workspaceIds
+      ),
+    moveWorkspace: (msg) =>
+      this.moveWorkspace(
+        (msg as Extract<WebviewMessage, { type: "moveWorkspace" }>).workspaceId,
+        (msg as Extract<WebviewMessage, { type: "moveWorkspace" }>).sourceGroupId,
+        (msg as Extract<WebviewMessage, { type: "moveWorkspace" }>).targetGroupId,
+        (msg as Extract<WebviewMessage, { type: "moveWorkspace" }>).targetWorkspaceIds
+      ),
+    runCommand: (msg) =>
+      this.runQuickAction(
+        (msg as Extract<WebviewMessage, { type: "runCommand" }>).command
+      )
+  };
+
   private async handleMessage(message: unknown): Promise<void> {
     if (!isWebviewMessage(message)) {
       await this.postError("Wayfinder received an invalid webview message.");
       return;
     }
 
+    const handler = this.messageHandlers[message.type];
+    if (!handler) {
+      await this.postError(`Unknown message type: "${message.type}".`);
+      return;
+    }
+
     try {
-      switch (message.type) {
-        case "ready":
-        case "refresh":
-          await this.postSnapshot();
-          return;
-        case "openWorkspace":
-          await this.openConfiguredWorkspace(
-            message.workspaceId,
-            message.forceNewWindow
-          );
-          return;
-        case "openRecent":
-          await this.openRecentTarget(message.fingerprint, message.forceNewWindow);
-          return;
-        case "removeRecent":
-          await this.dependencies.recentTargetsService.remove(message.fingerprint);
-          await this.postSnapshot();
-          return;
-        case "removeWorkspace":
-          await this.removeWorkspace(message.workspaceId);
-          return;
-        case "saveGroup":
-          await this.saveGroup(message.group);
-          return;
-        case "removeGroup":
-          await this.removeGroup(message.groupId);
-          return;
-        case "saveWorkspace":
-          await this.saveWorkspace(message.workspace);
-          return;
-        case "reorderGroups":
-          await this.reorderGroups(message.groupIds);
-          return;
-        case "reorderWorkspaces":
-          await this.reorderWorkspaces(message.groupId, message.workspaceIds);
-          return;
-        case "moveWorkspace":
-          await this.moveWorkspace(
-            message.workspaceId,
-            message.sourceGroupId,
-            message.targetGroupId,
-            message.targetWorkspaceIds
-          );
-          return;
-        case "runCommand":
-          await this.runQuickAction(message.command);
-          return;
-      }
+      await handler(message);
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Unknown error.";
       await this.postError(detail);
     }
+  }
+
+  private async removeRecentTarget(fingerprint: string): Promise<void> {
+    await this.dependencies.recentTargetsService.remove(fingerprint);
+    await this.postSnapshot();
   }
 
   private async openConfiguredWorkspace(
@@ -377,7 +397,7 @@ export class HubPanel {
       settings,
       recentTargets: await this.dependencies.recentTargetsService.list(),
       sshHosts,
-      configurationErrors: []
+      configurationErrors: this.dependencies.settingsService.getLastErrors()
     };
 
     await this.postMessage({ type: "snapshot", snapshot });
@@ -433,65 +453,6 @@ export class HubPanel {
   }
 }
 
-const quickActionCommandIds: Record<QuickActionCommand, string> = {
-  newFile: "workbench.action.files.newUntitledFile",
-  openFolder: "workbench.action.files.openFolder",
-  cloneRepository: "git.clone",
-  extensions: "workbench.view.extensions"
-};
-
-function isWebviewMessage(value: unknown): value is WebviewMessage {
-  if (!isRecord(value) || typeof value.type !== "string") {
-    return false;
-  }
-
-  switch (value.type) {
-    case "ready":
-    case "refresh":
-      return true;
-    case "openWorkspace":
-      return (
-        typeof value.workspaceId === "string" &&
-        (value.forceNewWindow === undefined ||
-          typeof value.forceNewWindow === "boolean")
-      );
-    case "openRecent":
-      return (
-        typeof value.fingerprint === "string" &&
-        (value.forceNewWindow === undefined ||
-          typeof value.forceNewWindow === "boolean")
-      );
-    case "removeRecent":
-      return typeof value.fingerprint === "string";
-    case "removeWorkspace":
-      return typeof value.workspaceId === "string";
-    case "saveGroup":
-      return isWayfinderGroup(value.group);
-    case "removeGroup":
-      return typeof value.groupId === "string";
-    case "saveWorkspace":
-      return isRecord(value.workspace);
-    case "reorderGroups":
-      return isStringArray(value.groupIds);
-    case "reorderWorkspaces":
-      return typeof value.groupId === "string" && isStringArray(value.workspaceIds);
-    case "moveWorkspace":
-      return (
-        typeof value.workspaceId === "string" &&
-        typeof value.sourceGroupId === "string" &&
-        typeof value.targetGroupId === "string" &&
-        isStringArray(value.targetWorkspaceIds)
-      );
-    case "runCommand":
-      return (
-        typeof value.command === "string" &&
-        value.command in quickActionCommandIds
-      );
-    default:
-      return false;
-  }
-}
-
 function toWorkspaceTarget(recentTarget: RecentTarget): WorkspaceTarget {
   if (recentTarget.kind === "ssh") {
     if (!recentTarget.host) {
@@ -529,20 +490,4 @@ function hasExactIds(
 
   const knownIds = new Set(items.map((item) => item.id));
   return ids.every((id) => knownIds.has(id));
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === "string");
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function isWayfinderGroup(value: unknown): value is WayfinderGroup {
-  return (
-    isRecord(value) &&
-    typeof value.id === "string" &&
-    typeof value.name === "string" &&
-    typeof value.order === "number"
-  );
 }

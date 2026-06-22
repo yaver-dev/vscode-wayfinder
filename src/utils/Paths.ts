@@ -1,5 +1,4 @@
 
-
 import * as path from "node:path";
 
 export function isAbsoluteLocalPath(value: string): boolean {

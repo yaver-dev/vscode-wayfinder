@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 import type { RecentTarget, WorkspaceTarget } from "../types";
+import { isRecord } from "../utils/types";
 
 const STORAGE_KEY = "wayfinder.recentTargets";
 const MAX_RECENT_TARGETS = 25;
@@ -17,8 +18,35 @@ export class RecentTargetsService {
   ) { }
 
   public async list(): Promise<RecentTarget[]> {
-    const nativeRecentTargets = await this.listNative();
-    return nativeRecentTargets.length > 0 ? nativeRecentTargets : this.listStored();
+    const nativeTargets = await this.listNative();
+    const storedTargets = this.listStored();
+    return this.mergeRecentTargets(nativeTargets, storedTargets);
+  }
+
+  mergeRecentTargets(
+    nativeTargets: RecentTarget[],
+    storedTargets: RecentTarget[]
+  ): RecentTarget[] {
+    const seen = new Set<string>();
+    const merged: RecentTarget[] = [];
+
+    for (const target of nativeTargets) {
+      if (!seen.has(target.fingerprint)) {
+        seen.add(target.fingerprint);
+        merged.push(target);
+      }
+    }
+
+    for (const target of storedTargets) {
+      if (!seen.has(target.fingerprint)) {
+        seen.add(target.fingerprint);
+        merged.push(target);
+      }
+    }
+
+    return merged
+      .sort((left, right) => right.openedAt.localeCompare(left.openedAt))
+      .slice(0, MAX_RECENT_TARGETS);
   }
 
   public async record(target: WorkspaceTarget): Promise<void> {
@@ -231,6 +259,3 @@ function isRecentTarget(value: unknown): value is RecentTarget {
   );
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}

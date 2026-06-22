@@ -1,14 +1,16 @@
 
-
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import type * as vscode from "vscode";
 import type { SshHost } from "../types";
 import { expandHomeDirectory } from "../utils/Paths";
 
 
 const MAX_INCLUDE_DEPTH = 16;
+
+export interface SshConfigGetter {
+  getSshConfigFile(): string | undefined;
+}
 
 export interface ParsedSshConfigContent {
   hostAliases: string[];
@@ -16,7 +18,10 @@ export interface ParsedSshConfigContent {
 }
 
 export class SshConfigService {
-  public constructor(private readonly configPathOverride?: string) { }
+  public constructor(
+    private readonly configGetter: SshConfigGetter,
+    private readonly configPathOverride?: string
+  ) { }
   public async listHosts(): Promise<SshHost[]> {
     const configPath =
       this.configPathOverride ?? this.resolveConfiguredSshConfigPath();
@@ -30,10 +35,7 @@ export class SshConfigService {
   }
 
   private resolveConfiguredSshConfigPath(): string {
-    const vscodeApi = require("vscode") as typeof vscode;
-    const configuredPath = vscodeApi.workspace
-      .getConfiguration("remote.SSH")
-      .get<string>("configFile");
+    const configuredPath = this.configGetter.getSshConfigFile();
 
     if (configuredPath && configuredPath.trim().length > 0) {
       return expandHomeDirectory(configuredPath.trim(), os.homedir());

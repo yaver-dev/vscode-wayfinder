@@ -3,6 +3,8 @@ import {
   WORKSPACE_KINDS,
   type WorkspaceTarget
 } from "../types";
+import { isRecord } from "../utils/types";
+import { isAbsoluteLocalPath } from "../utils/Paths";
 
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -121,10 +123,6 @@ export function validateWorkspaceTarget(
   return { errors: ["Workspace target kind is invalid."] };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function readRequiredString(
   value: Record<string, unknown>,
   propertyName: string,
@@ -230,6 +228,3 @@ function readOptionalBadge(
   return badge;
 }
 
-function isAbsoluteLocalPath(value: string): boolean {
-  return value.startsWith("/") || /^[A-Za-z]:[\\/]/.test(value);
-}

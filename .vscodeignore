@@ -1,0 +1,14 @@
+.gitignore
+.vscodeignore
+.vscode/**
+src/**
+shared/**
+webview/src/**
+test/**
+docs/**
+scripts/**
+tsconfig*.json
+esbuild.config.mjs
+package-lock.json
+**/*.map
+**/*.ts

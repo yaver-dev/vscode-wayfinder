@@ -1,5 +1,4 @@
 
-
 import { App } from "./App";
 import type { ExtensionMessage, WebviewApi } from "./protocol";
 import { DashboardStateStore } from "./state";
@@ -29,6 +28,10 @@ window.addEventListener("message", (event: MessageEvent<ExtensionMessage>) => {
 
   const snapshot = stateStore.applyMessage(message);
   if (snapshot) {
+    if (app.shouldSkipSnapshot()) {
+      app.consumeSkipSnapshot();
+      return;
+    }
     app.render(snapshot);
   }
 });

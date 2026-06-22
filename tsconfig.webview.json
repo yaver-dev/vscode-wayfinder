@@ -8,7 +8,7 @@
       "DOM.Iterable",
       "ES2022"
     ],
-    "rootDir": "webview/src",
+    "rootDir": ".",
     "outDir": "dist/webview",
     "sourceMap": true,
     "strict": true,
@@ -16,7 +16,8 @@
     "skipLibCheck": true
   },
   "include": [
-    "webview/src/**/*.ts"
+    "webview/src/**/*.ts",
+    "shared/**/*.ts"
   ],
   "exclude": [
     "node_modules",

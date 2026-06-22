@@ -1,5 +1,4 @@
 
-
 import type {
   WayfinderGroup,
   WayfinderSettings,
@@ -9,6 +8,7 @@ import {
   validateWorkspaceTarget,
   type ValidationResult
 } from "./WorkspaceTargetValidation";
+import { isRecord } from "../utils/types";
 
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -181,6 +181,3 @@ function readBoolean(
   return value;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}

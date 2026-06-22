@@ -1,5 +1,4 @@
 
-
 import * as vscode from "vscode";
 import type { SshWorkspaceTarget } from "../types";
 import { createRemoteSshWorkspaceUri } from "../utils/UriFactory";

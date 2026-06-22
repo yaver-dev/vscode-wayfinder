@@ -1,5 +1,4 @@
 
-
 import * as vscode from "vscode";
 import type {
   WayfinderGroup,
@@ -10,6 +9,7 @@ import { validateWayfinderSettings } from "../validation/ConfigValidation";
 
 export class SettingsService {
   private writeQueue: Promise<void> = Promise.resolve();
+  private lastErrors: string[] = [];
 
   public read(): WayfinderSettings {
     const configuration = vscode.workspace.getConfiguration("wayfinder");
@@ -20,6 +20,8 @@ export class SettingsService {
       importSshHosts: configuration.get<unknown>("importSshHosts", true)
     });
 
+    this.lastErrors = result.errors;
+
     if (result.errors.length > 0) {
       console.warn(
         "Wayfinder ignored invalid configuration values:",
@@ -28,6 +30,10 @@ export class SettingsService {
     }
 
     return result.value;
+  }
+
+  public getLastErrors(): string[] {
+    return this.lastErrors;
   }
 
   public updateGroups(groups: readonly WayfinderGroup[]): Promise<void> {

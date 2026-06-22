@@ -11,7 +11,10 @@ import { WorkspaceService } from "./services/WorkspaceService";
 export function activate(context: vscode.ExtensionContext): void {
   const settingsService = new SettingsService();
   const recentTargetsService = new RecentTargetsService(context.globalState);
-  const sshConfigService = new SshConfigService();
+  const sshConfigService = new SshConfigService({
+    getSshConfigFile: () =>
+      vscode.workspace.getConfiguration("remote.SSH").get<string>("configFile")
+  });
   const workspaceService = new WorkspaceService(new RemoteWorkspaceOpener());
 
   const openDashboard = (): void => {
