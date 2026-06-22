@@ -5,13 +5,29 @@
   font-size: var(--vscode-font-size);
 }
 
+:root {
+  --wayfinder-badge-purple: #9c27b0;
+  --wayfinder-badge-blue: #3574f0;
+  --wayfinder-badge-green: #5fad65;
+  --wayfinder-badge-orange: #ef6c00;
+  --wayfinder-badge-pink: #ad1457;
+  --wayfinder-badge-red: #c62828;
+  --wayfinder-badge-yellow: #c69214;
+  --wayfinder-badge-teal: #00838f;
+  --wayfinder-badge-cyan: #1565c0;
+  --wayfinder-badge-gray: #6b6b6b;
+  --wayfinder-badge-foreground: #ffffff;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
-  margin: 0;
   min-width: 320px;
+  height: 100vh;
+  margin: 0;
+  overflow: hidden;
   background: var(--vscode-editor-background);
   color: var(--vscode-foreground);
 }
@@ -38,10 +54,231 @@ button:focus-visible {
 
 .wayfinder-shell {
   display: grid;
-  grid-template-columns: minmax(210px, 0.85fr) minmax(360px, 2fr) minmax(220px, 0.9fr);
-  gap: 16px;
-  min-height: 100vh;
-  padding: 16px;
+  grid-template-columns: minmax(250px, 310px) minmax(0, 1fr);
+  gap: 0;
+  height: 100vh;
+  min-height: 0;
+  padding: 0;
+}
+
+.wayfinder-sidebar {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0;
+  border: 0;
+  border-right: 1px solid var(--vscode-sideBar-border, var(--vscode-panel-border));
+  border-radius: 0;
+  background: var(--vscode-sideBar-background);
+  padding: 0;
+}
+
+.sidebar-section {
+  min-width: 0;
+}
+
+.sidebar-section.recent-sidebar-section,
+.sidebar-section.remote-hosts-section {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.sidebar-section.recent-sidebar-section:not(.is-collapsed),
+.sidebar-section.remote-hosts-section:not(.is-collapsed) {
+  flex: 1 1 0;
+}
+
+.sidebar-section.is-collapsed {
+  flex: 0 0 auto;
+}
+
+.sidebar-splitter {
+  position: relative;
+  height: 6px;
+  flex: 0 0 6px;
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.sidebar-splitter.is-disabled {
+  display: none;
+}
+
+.sidebar-splitter::before {
+  position: absolute;
+  inset: 2px 0 auto;
+  height: 1px;
+  background: var(--vscode-sideBarSectionHeader-border, var(--vscode-panel-border));
+  content: "";
+}
+
+.sidebar-splitter:hover::before,
+.sidebar-splitter:focus-visible::before,
+body.sidebar-resizing .sidebar-splitter::before {
+  height: 2px;
+  background: var(--vscode-focusBorder);
+}
+
+body.sidebar-resizing,
+body.sidebar-resizing * {
+  cursor: row-resize !important;
+  user-select: none;
+}
+
+.sidebar-section.is-collapsed {
+  min-height: 0;
+}
+
+.sidebar-section-heading {
+  display: flex;
+  width: 100%;
+  min-height: 28px;
+  align-items: center;
+  border: 0;
+  border-radius: 0;
+  background: var(--vscode-sideBarSectionHeader-background, transparent);
+  color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 6px 10px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.sidebar-section-heading::before {
+  width: 14px;
+  color: var(--vscode-descriptionForeground);
+  content: "›";
+  font-size: 1rem;
+  line-height: 1;
+  transform: rotate(0deg);
+  transition: transform 120ms ease;
+}
+
+.sidebar-section-heading[aria-expanded="true"]::before {
+  transform: rotate(90deg);
+}
+
+.sidebar-section-heading:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.sidebar-count {
+  display: inline-flex;
+  min-width: 18px;
+  min-height: 18px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  border-radius: 999px;
+  background: var(--vscode-badge-background, var(--vscode-editorWidget-background));
+  color: var(--vscode-badge-foreground, var(--vscode-foreground));
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 6px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.sidebar-section-content {
+  min-width: 0;
+  min-height: 0;
+  padding: 0 0 8px;
+}
+
+/* Sidebar search toolbar and actions */
+.sidebar-search-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px 28px;
+  align-items: stretch;
+  margin: 0 8px 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border, var(--vscode-panel-border));
+}
+
+.sidebar-search-toolbar .sidebar-search-action {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-left: 0;
+  border-radius: 0;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+}
+
+.sidebar-search-toolbar .sidebar-search-action:last-child {
+  border-radius: 0 3px 3px 0;
+}
+
+.sidebar-search-toolbar .sidebar-search-action:hover:not(:disabled) {
+  background: var(--vscode-toolbar-hoverBackground);
+  color: var(--vscode-foreground);
+}
+
+.sidebar-search-toolbar .sidebar-search-action:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.sidebar-search-toolbar:focus-within .sidebar-search,
+.sidebar-search-toolbar:focus-within .sidebar-search-action {
+  border-color: var(--vscode-focusBorder);
+}
+
+.sidebar-search {
+  width: 100%;
+  height: 28px;
+  min-width: 0;
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-right: 0;
+  border-radius: 3px 0 0 3px;
+  outline: 0;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 3px 8px;
+}
+
+.sidebar-search::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+
+.sidebar-search:focus {
+  border-color: var(--vscode-focusBorder);
+}
+
+.recent-sidebar-section .sidebar-section-content,
+.remote-hosts-section .sidebar-section-content {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-section.is-collapsed .sidebar-section-content {
+  display: none;
+}
+
+.quick-actions-section .sidebar-section-heading {
+  cursor: default;
+  padding-top: 7px;
+}
+
+.quick-actions-section .sidebar-section-heading::before {
+  display: none;
+}
+
+.quick-actions-section {
+  border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border, var(--vscode-panel-border));
 }
 
 .wayfinder-panel {
@@ -53,7 +290,13 @@ button:focus-visible {
 }
 
 .workspace-panel {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  border: 0;
+  border-radius: 0;
   background: var(--vscode-editor-background);
+  padding: 18px;
 }
 
 .wayfinder-panel h1,
@@ -83,39 +326,150 @@ button:focus-visible {
 .quick-action-list,
 .remote-host-list {
   display: grid;
-  gap: 8px;
+  gap: 0;
 }
 
 .recent-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 4px 8px;
+  display: flex;
+  min-height: 58px;
   align-items: center;
-  border-radius: 6px;
-  padding: 6px;
+  gap: 10px;
+  overflow: hidden;
+  border-radius: 0;
+  padding: 6px 8px 6px 10px;
 }
 
 .recent-item:hover {
   background: var(--vscode-list-hoverBackground);
 }
 
-.recent-open {
-  grid-column: 1;
-  justify-self: start;
+.recent-visual-badge {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
-  border: 0;
-  background: transparent;
-  color: var(--vscode-foreground);
-  padding: 0;
-  text-align: left;
+  border-radius: 6px;
+  background: var(--vscode-descriptionForeground);
+  color: var(--wayfinder-badge-foreground);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.recent-open:hover {
-  background: transparent;
-  color: var(--vscode-textLink-foreground);
+.recent-visual-badge[data-color="purple"],
+.workspace-visual-badge[data-color="purple"] {
+  background: var(--wayfinder-badge-purple);
 }
+
+.recent-visual-badge[data-color="blue"],
+.workspace-visual-badge[data-color="blue"] {
+  background: var(--wayfinder-badge-blue);
+}
+
+.recent-visual-badge[data-color="green"],
+.workspace-visual-badge[data-color="green"] {
+  background: var(--wayfinder-badge-green);
+}
+
+.recent-visual-badge[data-color="orange"],
+.workspace-visual-badge[data-color="orange"] {
+  background: var(--wayfinder-badge-orange);
+}
+
+.recent-visual-badge[data-color="pink"],
+.workspace-visual-badge[data-color="pink"] {
+  background: var(--wayfinder-badge-pink);
+}
+
+.recent-visual-badge[data-color="red"],
+.workspace-visual-badge[data-color="red"] {
+  background: var(--wayfinder-badge-red);
+}
+
+.recent-visual-badge[data-color="yellow"],
+.workspace-visual-badge[data-color="yellow"] {
+  background: var(--wayfinder-badge-yellow);
+}
+
+.recent-visual-badge[data-color="teal"],
+.workspace-visual-badge[data-color="teal"] {
+  background: var(--wayfinder-badge-teal);
+}
+
+.recent-visual-badge[data-color="cyan"],
+.workspace-visual-badge[data-color="cyan"] {
+  background: var(--wayfinder-badge-cyan);
+}
+
+.recent-visual-badge[data-color="gray"],
+.workspace-visual-badge[data-color="gray"] {
+  background: var(--wayfinder-badge-gray);
+}
+
+.recent-item-content {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.recent-item-name {
+  display: block;
+  overflow: hidden;
+  color: var(--vscode-editor-foreground, var(--vscode-foreground));
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-item-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.remote-host-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.recent-item:hover .recent-item-actions,
+.recent-item:focus-within .recent-item-actions,
+.remote-host-item:hover .remote-host-actions,
+.remote-host-item:focus-within .remote-host-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.recent-action-button,
+.remote-host-action {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.recent-item-actions .recent-action-button,
+.remote-host-actions .remote-host-action {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+}
+
 
 .icon-button {
   display: inline-flex;
@@ -134,10 +488,6 @@ button:focus-visible {
   position: relative;
 }
 
-.recent-item>.icon-button {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-}
 
 .icon-button:hover {
   background: var(--vscode-toolbar-hoverBackground);
@@ -163,7 +513,8 @@ button:focus-visible {
   min-width: 0;
   overflow: hidden;
   color: var(--vscode-descriptionForeground);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
+  line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -185,7 +536,7 @@ button:focus-visible {
   border: 1px solid var(--vscode-panel-border);
   border-radius: 8px;
   background: var(--vscode-editorWidget-background);
-  padding: 12px;
+  padding: 14px 12px 52px;
 }
 
 .workspace-card::before {
@@ -196,24 +547,67 @@ button:focus-visible {
   content: "";
 }
 
+.workspace-visual-badge {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 1;
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--vscode-descriptionForeground);
+  color: var(--wayfinder-badge-foreground);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-card>.workspace-visual-badge {
+  margin-left: 0;
+}
+
+
 .workspace-card[data-color="purple"]::before {
-  background: var(--vscode-charts-purple);
+  background: var(--wayfinder-badge-purple);
 }
 
 .workspace-card[data-color="blue"]::before {
-  background: var(--vscode-charts-blue);
+  background: var(--wayfinder-badge-blue);
 }
 
 .workspace-card[data-color="green"]::before {
-  background: var(--vscode-charts-green);
+  background: var(--wayfinder-badge-green);
 }
 
 .workspace-card[data-color="orange"]::before {
-  background: var(--vscode-charts-orange);
+  background: var(--wayfinder-badge-orange);
 }
 
 .workspace-card[data-color="pink"]::before {
-  background: var(--vscode-charts-red);
+  background: var(--wayfinder-badge-pink);
+}
+
+.workspace-card[data-color="red"]::before {
+  background: var(--wayfinder-badge-red);
+}
+
+.workspace-card[data-color="yellow"]::before {
+  background: var(--wayfinder-badge-yellow);
+}
+
+.workspace-card[data-color="teal"]::before {
+  background: var(--wayfinder-badge-teal);
+}
+
+.workspace-card[data-color="cyan"]::before {
+  background: var(--wayfinder-badge-cyan);
 }
 
 .workspace-card>* {
@@ -225,19 +619,35 @@ button:focus-visible {
 }
 
 .workspace-actions {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 6px;
-  margin-top: 12px;
+  margin: 0;
 }
 
 .workspace-actions .icon-button {
   font-size: 1rem;
 }
 
+.workspace-card h3 {
+  color: var(--vscode-editor-foreground, var(--vscode-foreground));
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
 .workspace-card>h3 {
-  padding-right: 24px;
+  margin-left: 30px;
+  padding-right: 56px;
+}
+
+.workspace-card .workspace-metadata,
+.workspace-card .target-detail {
+  margin-left: 4px;
 }
 
 .workspace-metadata {
@@ -288,41 +698,98 @@ button:focus-visible {
 
 .quick-action-list {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: 0 8px 8px;
 }
 
 .quick-action-list .quick-action-button {
   width: 100%;
-  height: 38px;
-  border: 1px solid var(--vscode-panel-border);
-  background: var(--vscode-editorWidget-background);
+  height: 34px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--vscode-foreground);
-  font-size: 1.2rem;
+  font-size: 1.05rem;
 }
 
 .quick-action-list .quick-action-button:hover {
   background: var(--vscode-list-hoverBackground);
 }
 
-.subheading {
-  margin-top: 24px !important;
+.recent-sidebar-section .recent-list,
+.remote-hosts-section .remote-host-list {
+  scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
+  scrollbar-width: thin;
+}
+
+.recent-sidebar-section .recent-list::-webkit-scrollbar,
+.remote-hosts-section .remote-host-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.recent-sidebar-section .recent-list::-webkit-scrollbar-track,
+.remote-hosts-section .remote-host-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.recent-sidebar-section .recent-list::-webkit-scrollbar-thumb,
+.remote-hosts-section .remote-host-list::-webkit-scrollbar-thumb {
+  min-height: 20px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+  background-color: var(--vscode-scrollbarSlider-background);
+}
+
+.recent-sidebar-section .recent-list::-webkit-scrollbar-thumb:hover,
+.remote-hosts-section .remote-host-list::-webkit-scrollbar-thumb:hover {
+  background-color: var(--vscode-scrollbarSlider-hoverBackground);
+}
+
+
+/* Inserted rule for .remote-hosts-section .remote-host-list */
+.remote-hosts-section .remote-host-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .remote-host-item {
+  display: flex;
   width: 100%;
+  min-height: 28px;
+  align-items: center;
+  gap: 8px;
   overflow: hidden;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  background: var(--vscode-list-inactiveSelectionBackground);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--vscode-foreground);
-  padding: 7px 8px;
-  text-align: left;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  padding: 4px 8px 4px 10px;
+}
+
+.remote-host-item:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.remote-host-name {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.remote-host-item:hover {
-  border-color: var(--vscode-focusBorder);
-  background: var(--vscode-list-hoverBackground);
+.recent-sidebar-section .recent-list,
+.remote-hosts-section .remote-host-list {
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0 2px 8px 0;
 }
 
 .empty-state {
@@ -496,8 +963,9 @@ button:focus-visible {
 
 .workspace-card>.drag-handle {
   position: absolute;
-  top: 7px;
-  right: 7px;
+  top: 11px;
+  left: 14px;
+  right: auto;
   z-index: 1;
 }
 
@@ -554,24 +1022,35 @@ button:focus-visible {
   height: 19px;
 }
 
-@media (max-width: 980px) {
+@media (max-width: 760px) {
   .wayfinder-shell {
-    grid-template-columns: minmax(200px, 0.9fr) minmax(0, 2fr);
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
   }
 
-  .utility-panel {
-    grid-column: 1 / -1;
+  .wayfinder-sidebar {
+    order: 2;
+  }
+
+  body {
+    height: auto;
+    overflow: auto;
+  }
+
+  .wayfinder-sidebar {
+    border-top: 1px solid var(--vscode-sideBar-border, var(--vscode-panel-border));
+    border-right: 0;
+  }
+
+  .workspace-panel {
+    overflow: visible;
   }
 }
 
 @media (max-width: 680px) {
   .wayfinder-shell {
     grid-template-columns: 1fr;
-    padding: 10px;
-  }
-
-  .utility-panel {
-    grid-column: auto;
   }
 
   .group-header {

@@ -26,6 +26,7 @@ export function validateWorkspaceTarget(
   const kind = readWorkspaceKind(value, errors);
   const path = readRequiredString(value, "path", errors);
   const color = readOptionalColor(value, errors);
+  const badge = readOptionalBadge(value, errors);
 
   if (id && !ID_PATTERN.test(id)) {
     errors.push("Workspace target id must be lowercase kebab-case.");
@@ -79,7 +80,8 @@ export function validateWorkspaceTarget(
         kind: "ssh",
         host: sshHost,
         path,
-        ...(color ? { color } : {})
+        ...(color ? { color } : {}),
+        ...(badge ? { badge } : {})
       }
     };
   }
@@ -94,7 +96,8 @@ export function validateWorkspaceTarget(
         order,
         kind: "local",
         path,
-        ...(color ? { color } : {})
+        ...(color ? { color } : {}),
+        ...(badge ? { badge } : {})
       }
     };
   }
@@ -109,7 +112,8 @@ export function validateWorkspaceTarget(
         order,
         kind: "workspaceFile",
         path,
-        ...(color ? { color } : {})
+        ...(color ? { color } : {}),
+        ...(badge ? { badge } : {})
       }
     };
   }
@@ -196,6 +200,34 @@ function readOptionalColor(
   }
 
   return propertyValue as Exclude<WorkspaceTarget["color"], undefined>;
+}
+
+function readOptionalBadge(
+  value: Record<string, unknown>,
+  errors: string[]
+): string | undefined {
+  const propertyValue = value.badge;
+
+  if (propertyValue === undefined) {
+    return undefined;
+  }
+
+  if (typeof propertyValue !== "string") {
+    errors.push("Workspace target badge must be a string.");
+    return undefined;
+  }
+
+  const badge = propertyValue.trim();
+  if (badge.length === 0) {
+    return undefined;
+  }
+
+  if (badge.length > 3) {
+    errors.push("Workspace target badge must be at most 3 characters.");
+    return undefined;
+  }
+
+  return badge;
 }
 
 function isAbsoluteLocalPath(value: string): boolean {

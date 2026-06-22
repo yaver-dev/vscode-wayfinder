@@ -135,9 +135,18 @@
                   "green",
                   "orange",
                   "pink",
+                  "red",
+                  "yellow",
+                  "teal",
+                  "cyan",
                   "gray"
                 ],
                 "description": "Optional dashboard accent color."
+              },
+              "badge": {
+                "type": "string",
+                "maxLength": 3,
+                "description": "Optional 1 to 3 character label shown on the workspace badge."
               }
             }
           }

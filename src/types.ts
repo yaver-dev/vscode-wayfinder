@@ -12,6 +12,10 @@ export const WORKSPACE_COLORS = [
   "green",
   "orange",
   "pink",
+  "red",
+  "yellow",
+  "teal",
+  "cyan",
   "gray"
 ] as const;
 
@@ -31,6 +35,7 @@ interface WorkspaceTargetBase {
   kind: WorkspaceKind;
   path: string;
   color?: WorkspaceColor;
+  badge?: string;
 }
 
 export interface LocalWorkspaceTarget extends WorkspaceTargetBase {

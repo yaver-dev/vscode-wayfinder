@@ -13,6 +13,10 @@ const WORKSPACE_COLORS = [
   "green",
   "orange",
   "pink",
+  "red",
+  "yellow",
+  "teal",
+  "cyan",
   "gray"
 ] as const;
 
@@ -24,7 +28,10 @@ type IconName =
   | "folderOpen"
   | "newFile"
   | "openExternal"
-  | "trash";
+  | "pin"
+  | "trash"
+  | "clear"
+  | "filter";
 
 export class App {
   private currentSnapshot: DashboardSnapshot | undefined;
@@ -33,6 +40,11 @@ export class App {
   private draggingGroupId: string | undefined;
   private draggingWorkspaceId: string | undefined;
   private draggingWorkspaceSourceGroupId: string | undefined;
+  private sidebarSearchQuery = "";
+  private readonly sidebarSectionExpansion = new Map<string, boolean>([
+    ["recent", true],
+    ["remoteHosts", false]
+  ]);
 
   public constructor(
     private readonly root: HTMLElement,
@@ -52,9 +64,8 @@ export class App {
     shell.className = "wayfinder-shell";
 
     shell.append(
-      this.createRecentPanel(snapshot),
-      this.createWorkspacePanel(snapshot),
-      this.createUtilityPanel(snapshot)
+      this.createSidebar(snapshot),
+      this.createWorkspacePanel(snapshot)
     );
 
     this.root.append(shell);
@@ -74,21 +85,145 @@ export class App {
     return container;
   }
 
-  private createRecentPanel(snapshot: DashboardSnapshot): HTMLElement {
-    const panel = this.createPanel("Recent Targets", "wayfinder-panel recent-panel");
-    const list = document.createElement("div");
-    list.className = "recent-list";
+  private createSidebar(snapshot: DashboardSnapshot): HTMLElement {
+    const sidebar = document.createElement("aside");
+    sidebar.className = "wayfinder-sidebar";
 
-    if (snapshot.recentTargets.length === 0) {
-      list.append(this.createEmptyState("No recent targets yet."));
-    } else {
-      for (const target of snapshot.recentTargets) {
-        list.append(this.createRecentItem(target));
+    const quickActions = this.createStaticSidebarSection("Quick Actions", "quick-actions-section");
+    const actionList = document.createElement("div");
+    actionList.className = "quick-action-list";
+    actionList.append(
+      this.createQuickAction("New File", "newFile"),
+      this.createQuickAction("Open Folder", "openFolder"),
+      this.createQuickAction("Clone Repository", "cloneRepository"),
+      this.createQuickAction("Extensions", "extensions")
+    );
+    quickActions.content.append(actionList);
+
+    // Section containers
+    const recent = this.createSidebarSection("Recent Targets", "recent-sidebar-section", "recent");
+    const recentList = document.createElement("div");
+    recentList.className = "recent-list";
+    const recentCount = this.createSidebarCount(snapshot.recentTargets.length);
+    recent.heading.append(recentCount);
+
+    recent.content.append(recentList);
+
+    const remoteHosts = this.createSidebarSection("Remote Hosts", "remote-hosts-section", "remoteHosts");
+    const remoteList = document.createElement("div");
+    remoteList.className = "remote-host-list";
+    const remoteCount = this.createSidebarCount(snapshot.sshHosts.length);
+    remoteHosts.heading.append(remoteCount);
+    remoteHosts.content.append(remoteList);
+
+    const sectionSplitter = this.createSidebarSplitter(
+      sidebar,
+      recent.section,
+      remoteHosts.section
+    );
+
+    const updateSearchResults = (query: string): void => {
+      this.sidebarSearchQuery = query;
+      const normalizedQuery = query.trim().toLocaleLowerCase();
+      const recentTargets = snapshot.recentTargets.filter((target) =>
+        this.matchesSidebarSearch(normalizedQuery, target.name, target.path, target.host)
+      );
+      const sshHosts = snapshot.sshHosts.filter((host) =>
+        this.matchesSidebarSearch(normalizedQuery, host.alias)
+      );
+
+      this.populateRecentList(recentList, recentTargets, snapshot);
+      this.populateRemoteHostList(remoteList, sshHosts, snapshot);
+      this.updateSidebarCount(recentCount, recentTargets.length, snapshot.recentTargets.length);
+      this.updateSidebarCount(remoteCount, sshHosts.length, snapshot.sshHosts.length);
+    };
+
+    const searchToolbar = this.createSidebarSearchToolbar(updateSearchResults);
+    updateSearchResults(this.sidebarSearchQuery);
+
+    sidebar.append(
+      quickActions.section,
+      searchToolbar,
+      recent.section,
+      sectionSplitter,
+      remoteHosts.section
+    );
+    return sidebar;
+  }
+
+  private createSidebarSplitter(
+    sidebar: HTMLElement,
+    recentSection: HTMLElement,
+    remoteHostsSection: HTMLElement
+  ): HTMLElement {
+    const splitter = document.createElement("div");
+    splitter.className = "sidebar-splitter";
+    splitter.setAttribute("role", "separator");
+    splitter.setAttribute("aria-label", "Resize Recent Targets and Remote Hosts");
+    splitter.setAttribute("aria-orientation", "horizontal");
+    splitter.tabIndex = 0;
+
+    const syncSplitterState = (): void => {
+      const isDisabled =
+        recentSection.classList.contains("is-collapsed") ||
+        remoteHostsSection.classList.contains("is-collapsed");
+
+      splitter.classList.toggle("is-disabled", isDisabled);
+      splitter.tabIndex = isDisabled ? -1 : 0;
+
+      if (isDisabled) {
+        recentSection.style.removeProperty("flex");
+        remoteHostsSection.style.removeProperty("flex");
       }
-    }
+    };
 
-    panel.append(list);
-    return panel;
+    sidebar.addEventListener("wayfinder-sidebar-section-toggle", syncSplitterState);
+    syncSplitterState();
+
+    splitter.addEventListener("pointerdown", (event) => {
+      if (splitter.classList.contains("is-disabled")) {
+        event.preventDefault();
+        return;
+      }
+
+      event.preventDefault();
+      const recentHeight = recentSection.getBoundingClientRect().height;
+      const remoteHeight = remoteHostsSection.getBoundingClientRect().height;
+      const availableHeight = recentHeight + remoteHeight;
+
+      if (availableHeight <= 0) {
+        return;
+      }
+
+      const startY = event.clientY;
+      const minimumSectionHeight = 120;
+      splitter.setPointerCapture(event.pointerId);
+      document.body.classList.add("sidebar-resizing");
+
+      const onPointerMove = (moveEvent: PointerEvent): void => {
+        const requestedRecentHeight = recentHeight + moveEvent.clientY - startY;
+        const nextRecentHeight = Math.max(
+          minimumSectionHeight,
+          Math.min(availableHeight - minimumSectionHeight, requestedRecentHeight)
+        );
+        const nextRemoteHeight = availableHeight - nextRecentHeight;
+
+        recentSection.style.flex = `0 0 ${nextRecentHeight}px`;
+        remoteHostsSection.style.flex = `0 0 ${nextRemoteHeight}px`;
+      };
+
+      const onPointerUp = (): void => {
+        splitter.releasePointerCapture(event.pointerId);
+        document.body.classList.remove("sidebar-resizing");
+        document.removeEventListener("pointermove", onPointerMove);
+        document.removeEventListener("pointerup", onPointerUp);
+      };
+
+      document.addEventListener("pointermove", onPointerMove);
+      document.addEventListener("pointerup", onPointerUp);
+    });
+
+    return splitter;
   }
 
   private createWorkspacePanel(snapshot: DashboardSnapshot): HTMLElement {
@@ -188,70 +323,285 @@ export class App {
     return panel;
   }
 
-  private createUtilityPanel(snapshot: DashboardSnapshot): HTMLElement {
-    const panel = this.createPanel("Quick Actions", "wayfinder-panel utility-panel");
-    const actionList = document.createElement("div");
-    actionList.className = "quick-action-list";
 
-    actionList.append(
-      this.createQuickAction("New File", "newFile"),
-      this.createQuickAction("Open Folder", "openFolder"),
-      this.createQuickAction("Clone Repository", "cloneRepository"),
-      this.createQuickAction("Extensions", "extensions")
-    );
+  // Utility panel removed (replaced by sidebar)
 
-    const remoteHeading = document.createElement("h2");
-    remoteHeading.className = "subheading";
-    remoteHeading.textContent = "Remote Hosts";
+  private createStaticSidebarSection(
+    title: string,
+    className: string
+  ): { section: HTMLElement; content: HTMLElement } {
+    const section = document.createElement("section");
+    section.className = `sidebar-section ${className}`;
 
-    const remoteList = document.createElement("div");
-    remoteList.className = "remote-host-list";
+    const heading = document.createElement("h2");
+    heading.className = "sidebar-section-heading";
+    heading.textContent = title;
 
-    if (!snapshot.settings.importSshHosts) {
-      remoteList.append(this.createEmptyState("SSH host import is disabled."));
-    } else if (snapshot.sshHosts.length === 0) {
-      remoteList.append(this.createEmptyState("No SSH host aliases found."));
-    } else {
-      for (const host of snapshot.sshHosts) {
-        const item = document.createElement("button");
-        item.type = "button";
-        item.className = "remote-host-item";
-        item.textContent = host.alias;
-        item.title = `Create SSH workspace for ${host.alias}`;
-        item.addEventListener("click", () => {
-          this.createSshWorkspaceForHost(host.alias, snapshot);
-        });
-        remoteList.append(item);
-      }
-    }
+    const content = document.createElement("div");
+    content.className = "sidebar-section-content";
 
-    panel.append(actionList, remoteHeading, remoteList);
-    return panel;
+    section.append(heading, content);
+    return { section, content };
   }
 
-  private createRecentItem(target: RecentTarget): HTMLElement {
+  private createSidebarSection(
+    title: string,
+    className: string,
+    stateKey: string
+  ): { section: HTMLElement; content: HTMLElement; heading: HTMLButtonElement } {
+    const section = document.createElement("section");
+    section.className = `sidebar-section ${className}`;
+    const expanded = this.sidebarSectionExpansion.get(stateKey) ?? false;
+    section.classList.toggle("is-collapsed", !expanded);
+
+    const heading = document.createElement("button");
+    heading.type = "button";
+    heading.className = "sidebar-section-heading";
+    heading.textContent = title;
+    heading.setAttribute("aria-expanded", String(expanded));
+
+    const content = document.createElement("div");
+    content.className = "sidebar-section-content";
+    content.hidden = !expanded;
+
+    heading.addEventListener("click", () => {
+      const isExpanded = heading.getAttribute("aria-expanded") === "true";
+      heading.setAttribute("aria-expanded", String(!isExpanded));
+      content.hidden = isExpanded;
+      section.classList.toggle("is-collapsed", isExpanded);
+      this.sidebarSectionExpansion.set(stateKey, !isExpanded);
+      section.dispatchEvent(new CustomEvent("wayfinder-sidebar-section-toggle", { bubbles: true }));
+    });
+
+    section.append(heading, content);
+    return { section, content, heading };
+  }
+
+  private createSidebarSearchToolbar(onQueryChanged: (query: string) => void): HTMLElement {
+    const toolbar = document.createElement("div");
+    toolbar.className = "sidebar-search-toolbar";
+
+    const input = document.createElement("input");
+    input.type = "search";
+    input.className = "sidebar-search";
+    input.placeholder = "Search targets and hosts";
+    input.value = this.sidebarSearchQuery;
+    input.setAttribute("aria-label", "Search targets and hosts");
+
+    const clear = this.createIconButton("clear", "Clear search", () => {
+      input.value = "";
+      onQueryChanged("");
+      input.focus();
+    }, "sidebar-search-action");
+
+    const updateClearState = (): void => {
+      clear.disabled = input.value.length === 0;
+    };
+
+    input.addEventListener("input", () => {
+      onQueryChanged(input.value);
+      updateClearState();
+    });
+    updateClearState();
+
+    const filter = this.createIconButton("filter", "More filters are not available yet", () => {
+      // Reserved for future source/type filters.
+    }, "sidebar-search-action");
+    filter.disabled = true;
+
+    toolbar.append(input, clear, filter);
+    return toolbar;
+  }
+
+  private matchesSidebarSearch(
+    query: string,
+    ...values: Array<string | undefined>
+  ): boolean {
+    if (!query) {
+      return true;
+    }
+    return values.some((value) => value?.toLocaleLowerCase().includes(query));
+  }
+
+  private populateRecentList(
+    list: HTMLElement,
+    targets: RecentTarget[],
+    snapshot: DashboardSnapshot
+  ): void {
+    list.replaceChildren();
+
+    if (targets.length === 0) {
+      list.append(this.createEmptyState("No matching recent targets."));
+      return;
+    }
+
+    for (const target of targets) {
+      list.append(this.createRecentItem(target, snapshot));
+    }
+  }
+
+  private populateRemoteHostList(
+    list: HTMLElement,
+    hosts: DashboardSnapshot["sshHosts"],
+    snapshot: DashboardSnapshot
+  ): void {
+    list.replaceChildren();
+
+    if (!snapshot.settings.importSshHosts) {
+      list.append(this.createEmptyState("SSH host import is disabled."));
+      return;
+    }
+
+    if (hosts.length === 0) {
+      list.append(this.createEmptyState("No matching SSH host aliases."));
+      return;
+    }
+
+    for (const host of hosts) {
+      const item = document.createElement("article");
+      item.className = "remote-host-item";
+
+      const name = document.createElement("span");
+      name.className = "remote-host-name";
+      name.textContent = host.alias;
+      name.title = host.alias;
+
+      const actions = document.createElement("div");
+      actions.className = "remote-host-actions";
+      actions.append(
+        this.createIconButton("add", `Add SSH workspace for ${host.alias}`, () => {
+          this.createSshWorkspaceForHost(host.alias, snapshot);
+        }, "remote-host-action")
+      );
+
+      item.append(name, actions);
+      list.append(item);
+    }
+  }
+
+  private updateSidebarCount(badge: HTMLElement, value: number, total: number): void {
+    badge.textContent = value === total ? String(total) : `${value}/${total}`;
+  }
+
+  private createSidebarCount(value: number, total = value): HTMLElement {
+    const badge = document.createElement("span");
+    badge.className = "sidebar-count";
+    badge.textContent = value === total ? String(total) : `${value}/${total}`;
+    return badge;
+  }
+
+  private createRecentItem(target: RecentTarget, snapshot: DashboardSnapshot): HTMLElement {
     const item = document.createElement("article");
     item.className = "recent-item";
+    const matchingWorkspace = this.findPinnedWorkspaceForRecent(target, snapshot);
+    const visualBadge = this.createRecentVisualBadge(target, matchingWorkspace);
 
-    const openButton = document.createElement("button");
-    openButton.type = "button";
-    openButton.className = "recent-open";
-    openButton.textContent = target.name;
-    openButton.title = target.path;
-    openButton.addEventListener("click", () => {
-      this.postMessage({ type: "openRecent", fingerprint: target.fingerprint });
-    });
+    const content = document.createElement("div");
+    content.className = "recent-item-content";
+
+    const name = document.createElement("strong");
+    name.className = "recent-item-name";
+    name.textContent = target.name;
+    name.title = target.path;
 
     const detail = document.createElement("span");
     detail.className = "target-detail";
     detail.textContent = target.kind === "ssh" ? `${target.host}:${target.path}` : target.path;
 
-    const removeButton = this.createIconButton("trash", "Remove recent target", () => {
-      this.postMessage({ type: "removeRecent", fingerprint: target.fingerprint });
-    }, "destructive-icon-button");
+    content.append(name, detail);
 
-    item.append(openButton, detail, removeButton);
+    const actions = document.createElement("div");
+    actions.className = "recent-item-actions";
+    actions.append(
+      this.createIconButton("folderOpen", "Open recent target", () => {
+        this.postMessage({ type: "openRecent", fingerprint: target.fingerprint });
+      }, "recent-action-button"),
+      this.createIconButton("pin", "Pin as workspace", () => {
+        this.pinRecentTarget(target);
+      }, "recent-action-button"),
+      this.createIconButton("trash", "Remove recent target", () => {
+        this.postMessage({ type: "removeRecent", fingerprint: target.fingerprint });
+      }, "destructive-icon-button recent-action-button")
+    );
+
+    item.append(visualBadge, content, actions);
     return item;
+  }
+
+  private findPinnedWorkspaceForRecent(
+    target: RecentTarget,
+    snapshot: DashboardSnapshot
+  ): WorkspaceTarget | undefined {
+    return snapshot.settings.workspaces.find((workspace) =>
+      workspace.kind === target.kind &&
+      workspace.path === target.path &&
+      (workspace.kind !== "ssh" || workspace.host === target.host)
+    );
+  }
+
+  private createRecentVisualBadge(
+    target: RecentTarget,
+    workspace: WorkspaceTarget | undefined
+  ): HTMLElement {
+    const badge = document.createElement("span");
+    badge.className = "recent-visual-badge";
+    badge.dataset.color = workspace?.color ?? "gray";
+    badge.textContent = workspace
+      ? this.getWorkspaceBadgeText(workspace)
+      : this.getTargetBadgeText(target.name);
+    badge.title = target.name;
+    badge.setAttribute("aria-label", `${target.name} badge`);
+    return badge;
+  }
+
+  private getTargetBadgeText(name: string): string {
+    const words = name
+      .trim()
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter(Boolean);
+    const initials = words.slice(0, 3).map((word) => word[0]).join("");
+    const fallback = initials || name.trim().slice(0, 3);
+    return fallback.toLocaleUpperCase();
+  }
+
+  private pinRecentTarget(target: RecentTarget): void {
+    const snapshot = this.currentSnapshot;
+    if (!snapshot) {
+      return;
+    }
+
+    const group = [...snapshot.settings.groups].sort(
+      (left, right) => left.order - right.order || left.name.localeCompare(right.name)
+    )[0];
+
+    if (!group) {
+      return;
+    }
+
+    const workspace = this.createNewWorkspace(group.id, snapshot);
+    this.editingGroup = undefined;
+    this.editingWorkspace = target.kind === "ssh"
+      ? {
+        ...workspace,
+        kind: "ssh",
+        name: target.name,
+        host: target.host ?? "",
+        path: target.path
+      }
+      : target.kind === "workspaceFile"
+        ? {
+          ...workspace,
+          kind: "workspaceFile",
+          name: target.name,
+          path: target.path
+        }
+        : {
+          ...workspace,
+          kind: "local",
+          name: target.name,
+          path: target.path
+        };
+    this.rerenderCurrentSnapshot();
   }
 
   private createWorkspaceCard(workspace: WorkspaceTarget): HTMLElement {
@@ -261,6 +611,7 @@ export class App {
     card.dataset.workspaceId = workspace.id;
     card.draggable = true;
     this.configureWorkspaceDragAndDrop(card);
+    const workspaceBadge = this.createWorkspaceVisualBadge(workspace);
 
     const dragHandle = this.createDragHandle("Reorder workspace");
     const title = document.createElement("h3");
@@ -296,8 +647,27 @@ export class App {
     }, "destructive-icon-button");
 
     actions.append(openHere, openNewWindow, edit, remove);
-    card.append(dragHandle, title, metadata, detail, actions);
+    card.append(workspaceBadge, dragHandle, title, metadata, detail, actions);
     return card;
+  }
+
+  // Workspace badge and badge text
+  private createWorkspaceVisualBadge(workspace: WorkspaceTarget): HTMLElement {
+    const badge = document.createElement("span");
+    badge.className = "workspace-visual-badge";
+    badge.dataset.color = workspace.color ?? "gray";
+    badge.textContent = this.getWorkspaceBadgeText(workspace);
+    badge.title = workspace.name;
+    badge.setAttribute("aria-label", `${workspace.name} badge`);
+    return badge;
+  }
+
+  private getWorkspaceBadgeText(workspace: WorkspaceTarget): string {
+    const configuredBadge = workspace.badge?.trim();
+    if (configuredBadge) {
+      return configuredBadge.slice(0, 3).toLocaleUpperCase();
+    }
+    return this.getTargetBadgeText(workspace.name);
   }
 
   private createWorkspaceMetadata(workspace: WorkspaceTarget): HTMLElement {
@@ -418,6 +788,13 @@ export class App {
       ...WORKSPACE_COLORS.map((color) => ({ label: color, value: color }))
     ], workspace.color ?? "");
 
+    const badgeInput = this.createTextField(
+      "Badge text",
+      workspace.badge ?? "",
+      "Up to 3 characters"
+    );
+    badgeInput.input.maxLength = 3;
+
 
     const updateKindFields = (): void => {
       const isSsh = kindInput.input.value === "ssh";
@@ -442,7 +819,8 @@ export class App {
         name,
         order: workspace.order,
         path: pathInput.input.value.trim(),
-        ...(colorInput.input.value ? { color: colorInput.input.value } : {})
+        ...(colorInput.input.value ? { color: colorInput.input.value } : {}),
+        ...(badgeInput.input.value.trim() ? { badge: badgeInput.input.value.trim().slice(0, 3) } : {})
       };
 
       const target: WorkspaceTarget = kind === "ssh"
@@ -471,6 +849,7 @@ export class App {
       hostInput.field,
       pathInput.field,
       colorInput.field,
+      badgeInput.field,
       actions.container
     );
     editor.append(title, form);
@@ -614,7 +993,7 @@ export class App {
     button.addEventListener("click", onClick);
 
     if (additionalClassName) {
-      button.classList.add(additionalClassName);
+      button.classList.add(...additionalClassName.split(/\s+/).filter(Boolean));
     }
 
     return button;
@@ -628,6 +1007,8 @@ export class App {
 
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     const paths: Record<IconName, string> = {
+      clear: "M6.7 5.3 12 10.6l5.3-5.3 1.4 1.4-5.3 5.3 5.3 5.3-1.4 1.4-5.3-5.3-5.3 5.3-1.4-1.4 5.3-5.3-5.3-5.3 1.4-1.4z",
+      filter: "M4 5h16l-6.4 7.3V18l-3.2 1.8v-7.5L4 5zm4.4 2 3.6 4.1L15.6 7H8.4z",
       add: "M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z",
       clone: "M7 4a3 3 0 0 0-3 3v8h2V7a1 1 0 0 1 1-1h4V4H7zm10 5a3 3 0 0 0-3 3v1h-3v2h3v1a3 3 0 0 0 3 3h3v-2h-3a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h3V9h-3zm-7 4H8v2h2v-2z",
       edit: "m16.86 3.14 4 4L9.5 18.5 4 20l1.5-5.5L16.86 3.14zm0 2.83-9.54 9.54-.63 2.33 2.33-.63 9.54-9.54-1.7-1.7z",
@@ -635,6 +1016,7 @@ export class App {
       folderOpen: "M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v8A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5v-10zm2.5-.5a.5.5 0 0 0-.5.5v2h14V8.5a.5.5 0 0 0-.5-.5h-7.33l-2-2H5.5zM5 10.5v6a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-6H5z",
       newFile: "M6 3h8l4 4v14H6V3zm7 2.5V8h2.5L13 5.5zM11 11H9v3H6v2h3v3h2v-3h3v-2h-3v-3z",
       openExternal: "M14 4v2h2.59l-7.3 7.29 1.42 1.42L18 7.41V10h2V4h-6zM5 6h6v2H7v9h9v-4h2v6H5V6z",
+      pin: "M8 3h8v6l2 2v2h-5v8l-1-1-1 1v-8H6v-2l2-2V3zm2 2v4h4V5h-4z",
       trash: "M9 3h6l1 2h4v2H4V5h4l1-2zm-2 6h2v8H7V9zm4 0h2v8h-2V9zm4 0h2v8h-2V9z"
     };
 
