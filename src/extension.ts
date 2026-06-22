@@ -32,7 +32,7 @@ export function activate(context: vscode.ExtensionContext): void {
     100
   );
   statusBarItem.command = "wayfinder.open";
-  statusBarItem.text = "$(home) Wayfinder";
+  statusBarItem.text = "$(home)";
   statusBarItem.tooltip = "Open Wayfinder Dashboard";
   statusBarItem.show();
 

@@ -3,7 +3,6 @@ import type {
   RecentTarget,
   WebviewMessage
 } from "../protocol";
-import type { IconName } from "../lib/Icons";
 import {
   createIconButton,
   createEmptyState
@@ -27,17 +26,6 @@ export function createSidebar(
 ): HTMLElement {
   const sidebar = document.createElement("aside");
   sidebar.className = "wayfinder-sidebar";
-
-  const quickActions = createStaticSidebarSection("Quick Actions", "quick-actions-section");
-  const actionList = document.createElement("div");
-  actionList.className = "quick-action-list";
-  actionList.append(
-    createQuickActionButton("New File", "newFile", callbacks),
-    createQuickActionButton("Open Folder", "openFolder", callbacks),
-    createQuickActionButton("Clone Repository", "cloneRepository", callbacks),
-    createQuickActionButton("Extensions", "extensions", callbacks)
-  );
-  quickActions.content.append(actionList);
 
   const recent = createSidebarSection("Recent Targets", "recent-sidebar-section", sectionExpansion, "recent");
   const recentList = document.createElement("div");
@@ -74,48 +62,12 @@ export function createSidebar(
   updateSearchResults(searchQuery);
 
   sidebar.append(
-    quickActions.section,
     searchToolbar,
     recent.section,
     sectionSplitter,
     remoteHosts.section
   );
   return sidebar;
-}
-
-function createQuickActionButton(
-  label: string,
-  command: "newFile" | "openFolder" | "cloneRepository" | "extensions",
-  callbacks: SidebarCallbacks
-): HTMLButtonElement {
-  const icons: Record<typeof command, IconName> = {
-    newFile: "newFile",
-    openFolder: "folderOpen",
-    cloneRepository: "clone",
-    extensions: "extensions"
-  };
-
-  return createIconButton(icons[command], label, () => {
-    callbacks.postMessage({ type: "runCommand", command });
-  }, "quick-action-button");
-}
-
-function createStaticSidebarSection(
-  title: string,
-  className: string
-): { section: HTMLElement; content: HTMLElement } {
-  const section = document.createElement("section");
-  section.className = `sidebar-section ${className}`;
-
-  const heading = document.createElement("h2");
-  heading.className = "sidebar-section-heading";
-  heading.textContent = title;
-
-  const content = document.createElement("div");
-  content.className = "sidebar-section-content";
-
-  section.append(heading, content);
-  return { section, content };
 }
 
 function createSidebarSection(

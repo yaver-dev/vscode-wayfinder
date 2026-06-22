@@ -5,7 +5,10 @@ export const quickActionCommandIds: Record<QuickActionCommand, string> = {
   newFile: "workbench.action.files.newUntitledFile",
   openFolder: "workbench.action.files.openFolder",
   cloneRepository: "git.clone",
-  extensions: "workbench.view.extensions"
+  extensions: "workbench.view.extensions",
+  theme: "workbench.colorTheme",
+  keymap: "workbench.action.openGlobalKeybindings",
+  settings: "workbench.action.openSettings"
 };
 
 export function isWebviewMessage(value: unknown): value is WebviewMessage {

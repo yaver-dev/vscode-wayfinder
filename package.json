@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "publisher": "yaver-dev",
   "license": "MIT",
+  "icon": "icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/yaver-dev/vscode-wayfinder.git"

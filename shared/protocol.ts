@@ -85,4 +85,7 @@ export type QuickActionCommand =
   | "newFile"
   | "openFolder"
   | "cloneRepository"
-  | "extensions";
+  | "extensions"
+  | "theme"
+  | "keymap"
+  | "settings";

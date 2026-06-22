@@ -6,6 +6,7 @@ import type {
   WebviewMessage,
   WorkspaceTarget
 } from "./protocol";
+import type { IconName } from "./lib/Icons";
 import {
   createIconButton,
   createDragHandle,
@@ -129,17 +130,24 @@ export class App {
   }
 
   private createWorkspacePanel(snapshot: DashboardSnapshot): HTMLElement {
-    const panel = this.createPanel("Pinned Workspaces", "wayfinder-panel workspace-panel");
+    const panel = document.createElement("section");
+    panel.className = "wayfinder-panel workspace-panel";
+
+    panel.append(this.createQuickActionsBar());
+
+    const heading = document.createElement("h1");
+    heading.textContent = "Pinned Workspaces";
+    panel.append(heading);
+
     const headingActions = document.createElement("div");
     headingActions.className = "panel-heading-actions";
-
     const addGroupButton = createIconButton("add", "Add group", () => {
       this.editingWorkspace = undefined;
       this.editingGroup = createNewGroup(snapshot.settings.groups);
       this.rerenderCurrentSnapshot();
     });
     headingActions.append(addGroupButton);
-    panel.firstElementChild?.after(headingActions);
+    heading.after(headingActions);
 
     const groups = [...snapshot.settings.groups].sort(
       (a, b) => a.order - b.order || a.name.localeCompare(b.name)
@@ -174,6 +182,38 @@ export class App {
     }
 
     return panel;
+  }
+
+  private createQuickActionsBar(): HTMLElement {
+    const bar = document.createElement("div");
+    bar.className = "quick-actions-bar";
+
+    const label = document.createElement("span");
+    label.className = "quick-actions-bar-label";
+    label.textContent = "Quick Actions:";
+    bar.append(label);
+
+    const actions = document.createElement("div");
+    actions.className = "quick-actions-bar-items";
+
+    const commands: Array<{ label: string; command: "newFile" | "openFolder" | "cloneRepository" | "extensions" | "theme" | "keymap" | "settings"; icon: IconName }> = [
+      { label: "New File", command: "newFile", icon: "newFile" },
+      { label: "Open Folder", command: "openFolder", icon: "folderOpen" },
+      { label: "Clone Repository", command: "cloneRepository", icon: "clone" },
+      { label: "Extensions", command: "extensions", icon: "extensions" },
+      { label: "Theme", command: "theme", icon: "theme" },
+      { label: "Keymap", command: "keymap", icon: "keymap" },
+      { label: "Settings", command: "settings", icon: "settings" }
+    ];
+
+    for (const cmd of commands) {
+      actions.append(createIconButton(cmd.icon, cmd.label, () => {
+        this.postMessage({ type: "runCommand", command: cmd.command });
+      }, "quick-action-button"));
+    }
+
+    bar.append(actions);
+    return bar;
   }
 
   private createGroupSection(group: WayfinderGroup, snapshot: DashboardSnapshot): HTMLElement {
@@ -243,15 +283,6 @@ export class App {
 
     section.append(grid);
     return section;
-  }
-
-  private createPanel(title: string, className: string): HTMLElement {
-    const panel = document.createElement("section");
-    panel.className = className;
-    const heading = document.createElement("h1");
-    heading.textContent = title;
-    panel.append(heading);
-    return panel;
   }
 
   private pinRecentTarget(target: RecentTarget): void {
