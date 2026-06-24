@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Memento } from "vscode";
+import type { Memento, Uri as VSCodeUri } from "vscode";
 import type { RecentTarget, WorkspaceTarget } from "../src/types";
 import { RecentTargetsService } from "../src/services/RecentTargetsService";
 
@@ -12,6 +12,27 @@ function createMemento(initial: Record<string, unknown> = {}): Memento {
     },
     async update(key: string, value: unknown): Promise<void> {
       store[key] = value;
+    }
+  };
+}
+
+function createServiceDeps(initial: Record<string, unknown> = {}) {
+  const memento = createMemento(initial);
+  return {
+    globalState: memento,
+    listNativeCommand: "_workbench.getRecentlyOpened",
+    removeFromRecentCommand: "vscode.removeFromRecentlyOpened",
+    commands: { executeCommand: async () => undefined },
+    Uri: {
+      file(fsPath: string) {
+        return { scheme: "file", fsPath, authority: "", path: fsPath, toJSON() { return {}; }, with() { return this; } } as unknown as VSCodeUri;
+      },
+      parse(_value: string) {
+        return { scheme: "file", fsPath: _value, authority: "", path: _value, toJSON() { return {}; }, with() { return this; } } as unknown as VSCodeUri;
+      },
+      from(components: { scheme: string; authority: string; path: string }) {
+        return { ...components, fsPath: components.path, toJSON() { return {}; }, with() { return this; } } as unknown as VSCodeUri;
+      }
     }
   };
 }
@@ -42,8 +63,8 @@ function createSshTarget(overrides: Partial<WorkspaceTarget> = {}): WorkspaceTar
 }
 
 test("mergeRecentTargets deduplicates by fingerprint with native priority", () => {
-  const memento = createMemento();
-  const service = new RecentTargetsService(memento);
+  const deps = createServiceDeps();
+  const service = new RecentTargetsService(deps);
   const native: RecentTarget[] = [
     { fingerprint: "ssh:host-a:/path-a", kind: "ssh", name: "A", path: "/path-a", host: "host-a", openedAt: "2024-01-01T10:00:00Z" },
     { fingerprint: "local:/path-b", kind: "local", name: "B", path: "/path-b", openedAt: "2024-01-01T09:00:00Z" }
@@ -64,8 +85,8 @@ test("mergeRecentTargets deduplicates by fingerprint with native priority", () =
 });
 
 test("mergeRecentTargets sorts by openedAt descending", () => {
-  const memento = createMemento();
-  const service = new RecentTargetsService(memento);
+  const deps = createServiceDeps();
+  const service = new RecentTargetsService(deps);
   const targets: RecentTarget[] = [
     { fingerprint: "a", kind: "local", name: "A", path: "/a", openedAt: "2024-01-01T03:00:00Z" },
     { fingerprint: "b", kind: "local", name: "B", path: "/b", openedAt: "2024-01-01T01:00:00Z" },
@@ -81,8 +102,8 @@ test("mergeRecentTargets sorts by openedAt descending", () => {
 });
 
 test("mergeRecentTargets limits to MAX_RECENT_TARGETS", () => {
-  const memento = createMemento();
-  const service = new RecentTargetsService(memento);
+  const deps = createServiceDeps();
+  const service = new RecentTargetsService(deps);
   const targets: RecentTarget[] = Array.from({ length: 30 }, (_, i) => ({
     fingerprint: `target-${i}`,
     kind: "local" as const,
@@ -97,8 +118,8 @@ test("mergeRecentTargets limits to MAX_RECENT_TARGETS", () => {
 });
 
 test("record stores target and list returns it when native is empty", async () => {
-  const memento = createMemento();
-  const service = new RecentTargetsService(memento);
+  const deps = createServiceDeps();
+  const service = new RecentTargetsService(deps);
 
   await service.record(createLocalTarget({ id: "proj-1", name: "Project 1", path: "/projects/p1" }));
   await service.record(createSshTarget({ id: "srv-1", name: "Server 1", host: "prod", path: "/srv/app" }));
@@ -113,8 +134,8 @@ test("record stores target and list returns it when native is empty", async () =
 });
 
 test("record deduplicates by fingerprint and moves to front", async () => {
-  const memento = createMemento();
-  const service = new RecentTargetsService(memento);
+  const deps = createServiceDeps();
+  const service = new RecentTargetsService(deps);
 
   await service.record(createLocalTarget({ id: "a", name: "A", path: "/a" }));
   await service.record(createLocalTarget({ id: "b", name: "B", path: "/b" }));
@@ -128,8 +149,8 @@ test("record deduplicates by fingerprint and moves to front", async () => {
 });
 
 test("remove deletes stored entry by fingerprint", async () => {
-  const memento = createMemento();
-  const service = new RecentTargetsService(memento);
+  const deps = createServiceDeps();
+  const service = new RecentTargetsService(deps);
 
   await service.record(createLocalTarget({ id: "a", name: "A", path: "/a" }));
   await service.record(createLocalTarget({ id: "b", name: "B", path: "/b" }));
@@ -146,8 +167,8 @@ test("remove deletes stored entry by fingerprint", async () => {
 });
 
 test("clear removes all stored entries", async () => {
-  const memento = createMemento();
-  const service = new RecentTargetsService(memento);
+  const deps = createServiceDeps();
+  const service = new RecentTargetsService(deps);
 
   await service.record(createLocalTarget({ id: "a", name: "A", path: "/a" }));
   await service.record(createLocalTarget({ id: "b", name: "B", path: "/b" }));

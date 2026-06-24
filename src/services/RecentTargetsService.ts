@@ -1,12 +1,28 @@
 import * as path from "node:path";
-import * as vscode from "vscode";
+import type { Memento, Uri as VSCodeUri } from "vscode";
 import type { RecentTarget, WorkspaceTarget } from "../types";
 import { isRecord } from "../utils/types";
 
 const STORAGE_KEY = "wayfinder.recentTargets";
 const MAX_RECENT_TARGETS = 25;
-const RECENTLY_OPENED_COMMAND = "_workbench.getRecentlyOpened";
-const REMOVE_FROM_RECENTLY_OPENED_COMMAND = "vscode.removeFromRecentlyOpened";
+
+interface UriFactory {
+  file(fsPath: string): VSCodeUri;
+  parse(value: string): VSCodeUri;
+  from(components: { scheme: string; authority: string; path: string }): VSCodeUri;
+}
+
+interface CommandExecutor {
+  executeCommand<T>(command: string, ...rest: unknown[]): Promise<T | undefined>;
+}
+
+export interface RecentTargetsServiceDeps {
+  globalState: Memento;
+  listNativeCommand: string;
+  removeFromRecentCommand: string;
+  commands: CommandExecutor;
+  Uri: UriFactory;
+}
 
 interface RecentlyOpenedResult {
   workspaces?: unknown[];
@@ -14,7 +30,7 @@ interface RecentlyOpenedResult {
 
 export class RecentTargetsService {
   public constructor(
-    private readonly globalState: vscode.Memento
+    private readonly deps: RecentTargetsServiceDeps
   ) { }
 
   public async list(): Promise<RecentTarget[]> {
@@ -56,7 +72,7 @@ export class RecentTargetsService {
     );
 
     entries.unshift(entry);
-    await this.globalState.update(STORAGE_KEY, entries.slice(0, MAX_RECENT_TARGETS));
+    await this.deps.globalState.update(STORAGE_KEY, entries.slice(0, MAX_RECENT_TARGETS));
   }
 
   public async remove(fingerprint: string): Promise<void> {
@@ -67,7 +83,7 @@ export class RecentTargetsService {
       (entry) => entry.fingerprint !== fingerprint
     );
 
-    await this.globalState.update(STORAGE_KEY, entries);
+    await this.deps.globalState.update(STORAGE_KEY, entries);
 
     if (target) {
       await this.removeFromNativeRecent(target);
@@ -75,11 +91,11 @@ export class RecentTargetsService {
   }
 
   public async clear(): Promise<void> {
-    await this.globalState.update(STORAGE_KEY, []);
+    await this.deps.globalState.update(STORAGE_KEY, []);
   }
 
   private listStored(): RecentTarget[] {
-    const stored = this.globalState.get<unknown>(STORAGE_KEY, []);
+    const stored = this.deps.globalState.get<unknown>(STORAGE_KEY, []);
 
     if (!Array.isArray(stored)) {
       return [];
@@ -92,8 +108,8 @@ export class RecentTargetsService {
 
   private async listNative(): Promise<RecentTarget[]> {
     try {
-      const result = await vscode.commands.executeCommand<RecentlyOpenedResult>(
-        RECENTLY_OPENED_COMMAND
+      const result = await this.deps.commands.executeCommand<RecentlyOpenedResult>(
+        this.deps.listNativeCommand
       );
 
       if (!result || !Array.isArray(result.workspaces)) {
@@ -105,7 +121,7 @@ export class RecentTargetsService {
       const recentTargets: RecentTarget[] = [];
 
       for (const [index, workspace] of result.workspaces.entries()) {
-        const target = toRecentTargetFromNativeWorkspace(workspace, now - index);
+        const target = toRecentTargetFromNativeWorkspace(workspace, now - index, this.deps.Uri);
 
         if (target && !seen.has(target.fingerprint)) {
           seen.add(target.fingerprint);
@@ -121,9 +137,9 @@ export class RecentTargetsService {
 
   private async removeFromNativeRecent(target: RecentTarget): Promise<void> {
     try {
-      await vscode.commands.executeCommand(
-        REMOVE_FROM_RECENTLY_OPENED_COMMAND,
-        toUri(target)
+      await this.deps.commands.executeCommand(
+        this.deps.removeFromRecentCommand,
+        toUri(target, this.deps.Uri)
       );
     } catch {
       // Native recent support is best-effort and isolated behind this adapter.
@@ -145,13 +161,14 @@ function toRecentTarget(target: WorkspaceTarget): RecentTarget {
 
 function toRecentTargetFromNativeWorkspace(
   value: unknown,
-  openedAtMilliseconds: number
+  openedAtMilliseconds: number,
+  Uri: UriFactory
 ): RecentTarget | undefined {
   if (!isRecord(value)) {
     return undefined;
   }
 
-  const uri = readWorkspaceUri(value);
+  const uri = readWorkspaceUri(value, Uri);
   if (!uri) {
     return undefined;
   }
@@ -193,25 +210,25 @@ function toRecentTargetFromNativeWorkspace(
   };
 }
 
-function readWorkspaceUri(value: Record<string, unknown>): vscode.Uri | undefined {
+function readWorkspaceUri(value: Record<string, unknown>, Uri: UriFactory): VSCodeUri | undefined {
   if (value.folderUri !== undefined) {
-    return parseUri(value.folderUri);
+    return parseUri(value.folderUri, Uri);
   }
 
   if (isRecord(value.workspace) && value.workspace.configPath !== undefined) {
-    return parseUri(value.workspace.configPath);
+    return parseUri(value.workspace.configPath, Uri);
   }
 
   if (typeof value.path === "string") {
-    return vscode.Uri.file(value.path);
+    return Uri.file(value.path);
   }
 
   return undefined;
 }
 
-function parseUri(value: unknown): vscode.Uri | undefined {
-  if (value instanceof vscode.Uri) {
-    return value;
+function parseUri(value: unknown, Uri: UriFactory): VSCodeUri | undefined {
+  if (typeof value === "object" && value !== null && "scheme" in value && "fsPath" in value) {
+    return value as VSCodeUri;
   }
 
   if (typeof value !== "string") {
@@ -219,22 +236,22 @@ function parseUri(value: unknown): vscode.Uri | undefined {
   }
 
   try {
-    return vscode.Uri.parse(value);
+    return Uri.parse(value);
   } catch {
     return undefined;
   }
 }
 
-function toUri(target: RecentTarget): vscode.Uri {
+function toUri(target: RecentTarget, Uri: UriFactory): VSCodeUri {
   if (target.kind === "ssh" && target.host) {
-    return vscode.Uri.from({
+    return Uri.from({
       scheme: "vscode-remote",
       authority: `ssh-remote+${target.host}`,
       path: target.path
     });
   }
 
-  return vscode.Uri.file(target.path);
+  return Uri.file(target.path);
 }
 
 function createFingerprint(target: WorkspaceTarget): string {

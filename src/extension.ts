@@ -10,7 +10,16 @@ import { WorkspaceService } from "./services/WorkspaceService";
 
 export function activate(context: vscode.ExtensionContext): void {
   const settingsService = new SettingsService();
-  const recentTargetsService = new RecentTargetsService(context.globalState);
+  const recentTargetsService = new RecentTargetsService({
+    globalState: context.globalState,
+    listNativeCommand: "_workbench.getRecentlyOpened",
+    removeFromRecentCommand: "vscode.removeFromRecentlyOpened",
+    commands: {
+      executeCommand: <T>(command: string, ...rest: unknown[]) =>
+        Promise.resolve(vscode.commands.executeCommand<T>(command, ...rest))
+    },
+    Uri: vscode.Uri
+  });
   const sshConfigService = new SshConfigService({
     getSshConfigFile: () =>
       vscode.workspace.getConfiguration("remote.SSH").get<string>("configFile")
