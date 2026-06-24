@@ -50,6 +50,8 @@ export function activate(context: vscode.ExtensionContext): void {
   if (settings.openOnEmptyWindow && isEmptyWindow()) {
     openDashboard();
   }
+
+  openDashboard();
 }
 
 export function deactivate(): void {

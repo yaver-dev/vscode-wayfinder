@@ -56,9 +56,13 @@ export class HubPanel {
     const panel = vscode.window.createWebviewPanel(
       "wayfinder.dashboard",
       "Wayfinder",
-      vscode.ViewColumn.Active,
+      {
+        viewColumn: vscode.ViewColumn.Active,
+        preserveFocus: false
+      },
       {
         enableScripts: true,
+        retainContextWhenHidden: true,
         localResourceRoots: [
           vscode.Uri.joinPath(dependencies.extensionUri, "dist", "webview")
         ]
@@ -66,6 +70,7 @@ export class HubPanel {
     );
 
     HubPanel.currentPanel = new HubPanel(panel, dependencies);
+    panel.iconPath = new vscode.ThemeIcon("home");
   }
 
   public static refresh(): void {
