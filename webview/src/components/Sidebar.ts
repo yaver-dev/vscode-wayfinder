@@ -43,8 +43,11 @@ export function createSidebar(
 
   const sectionSplitter = createSidebarSplitter(sidebar, recent.section, remoteHosts.section);
 
-  const updateSearchResults = (query: string): void => {
-    const normalizedQuery = query.trim().toLocaleLowerCase();
+  let currentQuery = searchQuery;
+
+  const applyFilters = (): void => {
+    const normalizedQuery = currentQuery.trim().toLocaleLowerCase();
+
     const filteredRecents = snapshot.recentTargets.filter((target) =>
       matchesSearch(normalizedQuery, target.name, target.path, target.host)
     );
@@ -58,8 +61,11 @@ export function createSidebar(
     updateSidebarCountBadge(remoteCount, filteredHosts.length, snapshot.sshHosts.length);
   };
 
-  const searchToolbar = createSidebarSearchToolbar(searchQuery, updateSearchResults, callbacks);
-  updateSearchResults(searchQuery);
+  const searchToolbar = createSidebarSearchToolbar(searchQuery, (query) => {
+    currentQuery = query;
+    applyFilters();
+  }, callbacks);
+  applyFilters();
 
   sidebar.append(
     searchToolbar,
@@ -179,8 +185,8 @@ function createSidebarSplitter(
 
 function createSidebarSearchToolbar(
   query: string,
-  onQueryChanged: (query: string) => void,
-  callbacks: SidebarCallbacks
+  onFilter: (query: string) => void,
+  _callbacks: SidebarCallbacks
 ): HTMLElement {
   const toolbar = document.createElement("div");
   toolbar.className = "sidebar-search-toolbar";
@@ -192,23 +198,37 @@ function createSidebarSearchToolbar(
   input.value = query;
   input.setAttribute("aria-label", "Search targets and hosts");
 
-  const clear = createIconButton("clear", "Clear search", () => {
-    input.value = "";
-    onQueryChanged("");
-    input.focus();
-  }, "sidebar-search-action");
-
-  const updateClearState = (): void => {
-    clear.disabled = input.value.length === 0;
+  const updateButtonStates = (): void => {
+    const hasText = input.value.trim().length > 0;
+    filter.disabled = !hasText;
+    clear.disabled = !hasText;
   };
 
-  input.addEventListener("input", () => {
-    onQueryChanged(input.value);
-    updateClearState();
-  });
-  updateClearState();
+  const filter = createIconButton("filter", "Filter", () => {
+    onFilter(input.value);
+  }, "sidebar-search-action");
+  filter.disabled = true;
 
-  toolbar.append(input, clear);
+  const clear = createIconButton("clear", "Clear search", () => {
+    input.value = "";
+    onFilter("");
+    updateButtonStates();
+    input.focus();
+  }, "sidebar-search-action");
+  clear.disabled = true;
+
+  input.addEventListener("input", () => {
+    onFilter(input.value);
+    updateButtonStates();
+  });
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      onFilter(input.value);
+    }
+  });
+
+  toolbar.append(input, filter, clear);
   return toolbar;
 }
 
